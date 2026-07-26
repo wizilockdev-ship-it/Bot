@@ -11,27 +11,27 @@
 import os
 
 # --- Токен бота (получить у @BotFather) ---
-BOT_TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_БОТА"
+BOT_TOKEN = "8852402958:AAFoS_sWh890Bt1rVDpuLi0ko302VYHTJUw"
 
 # --- Telegram ID администраторов бота (можно несколько через запятую) ---
-ADMIN_IDS = [123456789]
+ADMIN_IDS = [8786951363]
 
 # --- ID закрытого чата поддержки (группа/супергруппа, куда бот пересылает
 # вопросы игроков). Бот должен быть добавлен в этот чат. Чтобы узнать ID —
 # добавь бота в чат, напиши там что угодно, и ID придёт в логах бота при
 # первом же сообщении (или используй любого бота типа @getmyid_bot). ID
 # групп/супергрупп отрицательный, например -1001234567890.
-ADMIN_CHAT_ID = 0
+ADMIN_CHAT_ID = -5496687874
 
 # --- Ссылка на создателя бота — показывается в статистике админ-панели ---
-CREATOR_LINK = "https://t.me/ВСТАВЬ_СВОЙ_USERNAME"
+CREATOR_LINK = "https://t.me/winikson"
 
 DB_FILE = "db.json"
 # Если DATABASE_URL не пустая строка — бот использует Postgres (Render Postgres /
 # Supabase / Neon), иначе — локальный файл db.json. На Render диск НЕ сохраняется
 # между деплоями и перезапусками — для реального проекта обязательно впиши сюда
 # connection string своей Postgres-базы!
-DATABASE_URL = ""   # например: "postgresql://user:password@host:5432/dbname"
+DATABASE_URL = "postgresql://neondb_owner:npg_nRlTm2JjM9PC@ep-wispy-grass-aw9i2moo-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"   # например: "postgresql://user:password@host:5432/dbname"
 
 # Порт для health-check веб-сервера. Render сам передаёт нужный порт через
 # переменную окружения PORT — эту строку менять не нужно.
@@ -41,8 +41,8 @@ BOT_DISPLAY_NAME = "VELRUM"
 CURRENCY_NAME = "V"
 
 # --- Обязательный канал для использования бота ---
-MANDATORY_CHANNEL_ID = 0   # например: -1001234567890 (0 = проверка отключена)
-MANDATORY_CHANNEL_LINK = "https://t.me/your_channel"
+MANDATORY_CHANNEL_ID = -1004307471533   # например: -1001234567890 (0 = проверка отключена)
+MANDATORY_CHANNEL_LINK = "https://t.me/velrum_hub"
 
 # --- Экономика ---
 MIN_PRICE_PER_SUB = 500
