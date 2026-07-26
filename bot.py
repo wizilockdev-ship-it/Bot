@@ -21,7 +21,7 @@ ADMIN_IDS = [8786951363]
 # добавь бота в чат, напиши там что угодно, и ID придёт в логах бота при
 # первом же сообщении (или используй любого бота типа @getmyid_bot). ID
 # групп/супергрупп отрицательный, например -1001234567890.
-ADMIN_CHAT_ID = -5496687874
+ADMIN_CHAT_ID = -1003953440216
 
 # --- Ссылка на создателя бота — показывается в статистике админ-панели ---
 CREATOR_LINK = "https://t.me/winikson"
@@ -56,8 +56,8 @@ REFERRAL_REWARD = 4000            # награда за обычного реф�
 REFERRAL_REWARD_PREMIUM = 8000    # награда, если у реферала Telegram Premium, V
 
 # --- Штраф за раннюю отписку: единоразовый, фиксированный ---
-UNSUBSCRIBE_LOCK_DAYS = 7        # если отписался раньше этого срока — штраф
-UNSUB_PENALTY = 500              # фиксированный единоразовый штраф, V
+UNSUBSCRIBE_LOCK_DAYS = 7        # сколько дней подряд нужно быть подписанным, чтобы награда закрепилась
+RESUB_GRACE_HOURS = 24           # сколько часов даётся на возврат в канал после отписки, пока сумма удержана
 FREEZE_AFTER_OFFENSES = 3        # после скольких нарушений баланс замораживается
 
 EARN_PAGE_SIZE = 6
@@ -75,7 +75,7 @@ from aiogram import Bot, Dispatcher, Router, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from aiogram.filters import CommandStart, CommandObject
+from aiogram.filters import CommandStart, CommandObject, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -114,8 +114,7 @@ def card(lines: list[str]) -> str:
 
 
 def fmt_v(amount) -> str:
-    sign = "+" if amount > 0 else ""
-    return f"{sign}{amount} {CURRENCY_NAME}"
+    return f"{amount} {CURRENCY_NAME}"
 
 
 async def send_screen(target, text: str, reply_markup=None):
@@ -143,6 +142,7 @@ def _default_db() -> dict:
             "next_task_id": 1,
             "start_date": None,
             "turnover": 0,
+            "support_chat_id": None,   # назначается командой /setsupport прямо в нужном чате
         },
     }
 
@@ -208,6 +208,7 @@ async def init_db():
 
     if not DB["meta"].get("start_date"):
         DB["meta"]["start_date"] = dt.datetime.utcnow().isoformat()
+    DB["meta"].setdefault("support_chat_id", None)
 
     await _save_db()
 
@@ -513,31 +514,108 @@ async def claim_daily_bonus(user_id: int):
 
 
 # ============================================================================
-# ===== БЛОК: ШТРАФ ЗА РАННЮЮ ОТПИСКУ (единоразовый, фиксированный) ===========
-# Правило: если игрок отписался раньше UNSUBSCRIBE_LOCK_DAYS (7 дней) с
-# момента выполнения задания — один раз списывается фиксированный штраф
-# UNSUB_PENALTY (500 V). Никаких возвратов, никакой второй волны штрафов —
-# запись сразу закрывается ("finalized"). После FREEZE_AFTER_OFFENSES таких
-# нарушений баланс замораживается до решения администратора.
+# ===== БЛОК: ОТПИСКА → УДЕРЖАНИЕ СУММЫ → 24Ч НА ВОЗВРАТ ======================
+# Правило: пока не прошло UNSUBSCRIBE_LOCK_DAYS (7 дней) подряд в канале —
+# как только игрок отписывается, у него СРАЗУ списывается сумма награды за
+# это задание, и ему приходит сообщение с кнопками "Подписаться" / "Проверить".
+# Статус выполнения переходит в "grace" (удержание). Есть RESUB_GRACE_HOURS
+# (24 часа), чтобы подписаться обратно:
+#   • если подписался вовремя — сумма возвращается, статус снова "active";
+#   • если нет — списание становится окончательным ("finalized"), плюс
+#     засчитывается нарушение (после FREEZE_AFTER_OFFENSES баланс морозится).
+# Цикл может повторяться (отписался/вернулся) сколько угодно раз, пока не
+# истекут все 7 дней с момента выполнения задания.
 # ============================================================================
 
-async def apply_unsubscribe_penalty(bot: Bot, task: dict, user_id: int):
+def resub_keyboard(task: dict) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔗 Подписаться", url=task["chat_link"])],
+        [InlineKeyboardButton(text="✅ Проверить", callback_data=f"resub_check:{task['id']}")],
+    ])
+
+
+async def start_unsub_grace(bot: Bot, task: dict, user_id: int):
+    """Игрок отписался: сразу списываем сумму, даём RESUB_GRACE_HOURS на возврат."""
     async with _db_lock:
         completion = next(
             (c for c in DB["completions"] if c["task_id"] == task["id"] and c["user_id"] == user_id),
             None,
         )
         if completion is None or completion["status"] != "active":
+            return  # уже в удержании / закрыто / не найдено — второй раз не запускаем
+        price = completion["reward"]
+        deadline = dt.datetime.utcnow() + dt.timedelta(hours=RESUB_GRACE_HOURS)
+        completion["status"] = "grace"
+        completion["grace_deadline"] = deadline.isoformat()
+
+        user = DB["users"].get(str(user_id))
+        if user:
+            user["balance"] -= price
+            DB["transactions"].append({"user_id": user_id, "amount": -price, "reason": f"unsub_hold:{task['id']}", "created_at": _now()})
+            DB["meta"]["turnover"] = DB["meta"].get("turnover", 0) + price
+        await _save_db()
+
+    try:
+        await bot.send_message(
+            user_id,
+            f"⚠️ <b>Вы отписались от «{task['chat_title']}»</b>\n{BAR}\n"
+            f"Списано: {fmt_v(-price)}.\n"
+            f"У вас есть {RESUB_GRACE_HOURS} ч, чтобы подписаться обратно — тогда сумма вернётся автоматически.\n"
+            f"Если не успеть — списание останется окончательным.",
+            reply_markup=resub_keyboard(task),
+        )
+    except Exception:
+        pass
+
+
+async def refund_unsub_hold(bot: Bot, task: dict, user_id: int, notify: bool = True):
+    """Игрок вовремя подписался обратно — возвращаем удержанную сумму."""
+    async with _db_lock:
+        completion = next(
+            (c for c in DB["completions"] if c["task_id"] == task["id"] and c["user_id"] == user_id),
+            None,
+        )
+        if completion is None or completion["status"] != "grace":
+            return False
+        price = completion["reward"]
+        completion["status"] = "active"
+        completion.pop("grace_deadline", None)
+
+        user = DB["users"].get(str(user_id))
+        if user:
+            user["balance"] += price
+            DB["transactions"].append({"user_id": user_id, "amount": price, "reason": f"unsub_refund:{task['id']}", "created_at": _now()})
+            DB["meta"]["turnover"] = DB["meta"].get("turnover", 0) + price
+        await _save_db()
+
+    if notify:
+        try:
+            await bot.send_message(
+                user_id,
+                f"✅ <b>Подписка на «{task['chat_title']}» восстановлена</b>\n{BAR}\n"
+                f"Возвращено: {fmt_v(price)}. Спасибо, что остались с нами! 🙌",
+            )
+        except Exception:
+            pass
+    return True
+
+
+async def finalize_unsub_penalty(bot: Bot, task: dict, user_id: int):
+    """Игрок не успел подписаться обратно за RESUB_GRACE_HOURS — штраф окончательный."""
+    async with _db_lock:
+        completion = next(
+            (c for c in DB["completions"] if c["task_id"] == task["id"] and c["user_id"] == user_id),
+            None,
+        )
+        if completion is None or completion["status"] != "grace":
             return
         completion["status"] = "finalized"
+        completion.pop("grace_deadline", None)
 
         user = DB["users"].get(str(user_id))
         just_frozen = False
         if user:
-            user["balance"] -= UNSUB_PENALTY
             user["unsub_offenses"] = user.get("unsub_offenses", 0) + 1
-            DB["transactions"].append({"user_id": user_id, "amount": -UNSUB_PENALTY, "reason": f"unsubscribe_penalty:{task['id']}", "created_at": _now()})
-            DB["meta"]["turnover"] = DB["meta"].get("turnover", 0) + UNSUB_PENALTY
             if user["unsub_offenses"] >= FREEZE_AFTER_OFFENSES and not user.get("balance_frozen"):
                 user["balance_frozen"] = True
                 just_frozen = True
@@ -550,25 +628,53 @@ async def apply_unsubscribe_penalty(bot: Bot, task: dict, user_id: int):
     try:
         await bot.send_message(
             user_id,
-            f"⚠️ <b>Штраф за отписку</b>\n{BAR}\n"
-            f"Вы отписались от «{task['chat_title']}» раньше {UNSUBSCRIBE_LOCK_DAYS} дней "
-            f"после выполнения задания.\n"
-            f"Списано: {fmt_v(-UNSUB_PENALTY)} (баланс мог уйти в минус)." + freeze_line,
+            f"⛔ <b>Штраф окончательный</b>\n{BAR}\n"
+            f"Вы не подписались обратно на «{task['chat_title']}» за {RESUB_GRACE_HOURS} ч. "
+            f"Списанная сумма не возвращается." + freeze_line,
         )
     except Exception:
         pass
 
 
+@router.callback_query(F.data.startswith("resub_check:"))
+async def resub_check_callback(callback: CallbackQuery, bot: Bot):
+    task_id = int(callback.data.split(":", 1)[1])
+    user_id = callback.from_user.id
+    async with _db_lock:
+        task = DB["tasks"].get(str(task_id))
+        completion = next(
+            (c for c in DB["completions"] if c["task_id"] == task_id and c["user_id"] == user_id),
+            None,
+        )
+    if not task or not completion or completion["status"] != "grace":
+        await callback.answer("Актуальных удержаний по этому заданию не найдено.", show_alert=True)
+        return
+
+    if not await is_user_subscribed(bot, task["chat_id"], user_id):
+        await callback.answer(NOT_SUBSCRIBED_ERROR, show_alert=True)
+        return
+
+    await refund_unsub_hold(bot, task, user_id, notify=False)
+    try:
+        await callback.message.edit_text(f"✅ Подписка восстановлена, {fmt_v(completion['reward'])} возвращены на баланс!")
+    except TelegramBadRequest:
+        pass
+    await callback.answer("Готово ✅")
+
+
 async def recheck_subscriptions(bot: Bot):
     """Фоновая проверка (каждые SUBSCRIPTION_RECHECK_INTERVAL сек):
-    1) для активных выполнений младше 7 дней — подписан ли ещё игрок (если
-       нет — единоразовый фиксированный штраф);
-    2) закрывает статус тем, кому пошёл 8-й день (штраф больше не грозит);
-    3) проверяет, жив ли бот как админ в каналах активных заданий — если
-       удалён из админов, задание просто деактивируется, без последствий
-       для игроков.
+    1) активные выполнения младше 7 дней — если игрок отписался, запускаем
+       удержание суммы на RESUB_GRACE_HOURS (см. start_unsub_grace);
+    2) выполнения в статусе "grace" — если игрок уже подписался обратно,
+       автоматически возвращаем сумму; если время вышло — штраф окончательный;
+    3) выполнения младше 7 дней, доживших до дедлайна в статусе "active" —
+       закрываем как успешные (риск списания больше не грозит);
+    4) проверяет, жив ли бот как админ в каналах активных заданий — если
+       удалён из админов, задание деактивируется, без последствий для игроков.
     """
-    cutoff = dt.datetime.utcnow() - dt.timedelta(days=UNSUBSCRIBE_LOCK_DAYS)
+    now = dt.datetime.utcnow()
+    cutoff = now - dt.timedelta(days=UNSUBSCRIBE_LOCK_DAYS)
 
     async with _db_lock:
         tasks_snapshot = {tid: dict(t) for tid, t in DB["tasks"].items() if t["is_active"]}
@@ -587,19 +693,35 @@ async def recheck_subscriptions(bot: Bot):
             logger.info("Задание %s деактивировано: бот больше не админ канала.", tid)
 
     async with _db_lock:
-        pending = [
+        active_pending = [
             c for c in DB["completions"]
             if c["status"] == "active" and dt.datetime.fromisoformat(c["completed_at"]) >= cutoff
         ]
+        grace_pending = [dict(c) for c in DB["completions"] if c["status"] == "grace"]
         tasks_snapshot = {tid: dict(t) for tid, t in DB["tasks"].items()}
 
-    for completion in pending:
+    # 1) кто ещё "active" в пределах 7 дней — проверяем подписку
+    for completion in active_pending:
         task = tasks_snapshot.get(str(completion["task_id"]))
         if task is None:
             continue
         if not await is_user_subscribed(bot, task["chat_id"], completion["user_id"]):
-            await apply_unsubscribe_penalty(bot, task, completion["user_id"])
+            await start_unsub_grace(bot, task, completion["user_id"])
 
+    # 2) кто в "grace" — проверяем, вернулся ли, или вышло ли время
+    for completion in grace_pending:
+        task = tasks_snapshot.get(str(completion["task_id"]))
+        if task is None:
+            continue
+        user_id = completion["user_id"]
+        if await is_user_subscribed(bot, task["chat_id"], user_id):
+            await refund_unsub_hold(bot, task, user_id)
+            continue
+        deadline_raw = completion.get("grace_deadline")
+        if deadline_raw and now >= dt.datetime.fromisoformat(deadline_raw):
+            await finalize_unsub_penalty(bot, task, user_id)
+
+    # 3) кто дожил до 7 дней в статусе "active" — закрываем как успешные
     async with _db_lock:
         changed = False
         for c in DB["completions"]:
@@ -618,7 +740,7 @@ def main_menu(admin: bool = False) -> ReplyKeyboardMarkup:
     rows = [
         [KeyboardButton(text="⚡ Заработать"), KeyboardButton(text="🎁 Бонус")],
         [KeyboardButton(text="📯 Продвигать"), KeyboardButton(text="🛰 Кабинет")],
-        [KeyboardButton(text="🆘 Поддержка")],
+        [KeyboardButton(text="📊 Статистика"), KeyboardButton(text="🆘 Поддержка")],
     ]
     if admin:
         rows.append([KeyboardButton(text="🛠 Админ-панель")])
@@ -792,7 +914,22 @@ support_router = Router(name="velrum_support")
 
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")
-support_router.message.filter(F.chat.id == ADMIN_CHAT_ID)
+
+
+def get_support_chat_id() -> int:
+    """Чат поддержки: сначала берём тот, что назначен командой /setsupport
+    (хранится в базе и переживает рестарты), иначе — константу ADMIN_CHAT_ID
+    из конфига вверху файла."""
+    configured = DB.get("meta", {}).get("support_chat_id")
+    return configured or ADMIN_CHAT_ID or 0
+
+
+async def _is_support_chat(message: Message) -> bool:
+    chat_id = get_support_chat_id()
+    return bool(chat_id) and message.chat.id == chat_id
+
+
+support_router.message.filter(_is_support_chat)
 
 
 # ============================================================================
@@ -1143,6 +1280,32 @@ async def daily_bonus(message: Message, bot: Bot):
 
 
 # ============================================================================
+# ===== БЛОК: "📊 СТАТИСТИКА" (личная статистика — доступна всем) =============
+# ============================================================================
+
+@router.message(F.text == "📊 Статистика")
+async def personal_stats(message: Message, bot: Bot):
+    if not await _require_mandatory(message, bot):
+        return
+    async with _db_lock:
+        total_users = len(DB["users"])
+        banned_count = sum(1 for u in DB["users"].values() if u.get("is_banned"))
+        active_users = total_users - banned_count
+        turnover = DB["meta"].get("turnover", 0)
+        start_date_raw = DB["meta"].get("start_date")
+    start_date = dt.datetime.fromisoformat(start_date_raw).strftime("%d.%m.%Y") if start_date_raw else "—"
+
+    text = (
+        screen_header("📊", "Статистика") +
+        f"👤 Игроков в боте: <b>{active_users}</b>\n"
+        f"💱 Валюты в обороте: <b>{fmt_v(turnover)}</b>\n"
+        f"📅 Дата старта: {start_date}\n"
+        f"👑 Админ: {CREATOR_LINK}"
+    )
+    await send_screen(message, text)
+
+
+# ============================================================================
 # ===== БЛОК: "🆘 ПОДДЕРЖКА" (переписка игрок ↔ закрытый чат админов) =========
 # Игрок пишет вопрос → бот пересылает его в закрытый чат поддержки как
 # отдельное сообщение → администратор отвечает на него ОТВЕТОМ (reply) в том
@@ -1174,7 +1337,8 @@ async def support_receive(message: Message, state: FSMContext, bot: Bot):
     user = message.from_user
     text = message.text or message.caption
 
-    if not ADMIN_CHAT_ID:
+    support_chat_id = get_support_chat_id()
+    if not support_chat_id:
         await message.answer(
             "⚠️ Поддержка сейчас недоступна, попробуй позже.",
             reply_markup=main_menu(admin=is_admin(user.id)),
@@ -1195,9 +1359,9 @@ async def support_receive(message: Message, state: FSMContext, bot: Bot):
         f"↩️ Ответь на ЭТО сообщение (reply), чтобы отправить ответ игроку."
     )
     try:
-        sent = await bot.send_message(ADMIN_CHAT_ID, admin_text)
+        sent = await bot.send_message(support_chat_id, admin_text)
     except Exception:
-        logger.warning("Не удалось отправить обращение в чат поддержки (ADMIN_CHAT_ID=%s).", ADMIN_CHAT_ID)
+        logger.warning("Не удалось отправить обращение в чат поддержки (support_chat_id=%s).", support_chat_id)
         await message.answer(
             "✖️ Не удалось отправить обращение. Попробуй позже.",
             reply_markup=main_menu(admin=is_admin(user.id)),
@@ -1454,7 +1618,7 @@ async def admin_settings_start(callback: CallbackQuery, state: FSMContext):
         f"MIN_PRICE_PER_SUB={MIN_PRICE_PER_SUB}\n"
         f"DAILY_BONUS_AMOUNT={DAILY_BONUS_AMOUNT}\n"
         f"UNSUBSCRIBE_LOCK_DAYS={UNSUBSCRIBE_LOCK_DAYS}\n"
-        f"UNSUB_PENALTY={UNSUB_PENALTY}\n\n"
+        f"RESUB_GRACE_HOURS={RESUB_GRACE_HOURS}\n\n"
         "Чтобы изменить на время работы процесса, пришли в этом же формате "
         "(строка на параметр, KEY=значение)."
     )
@@ -1464,7 +1628,7 @@ async def admin_settings_start(callback: CallbackQuery, state: FSMContext):
 @router.message(AdminSettingsForm.waiting_for_values)
 async def admin_settings_apply(message: Message, state: FSMContext):
     await state.clear()
-    global MIN_PRICE_PER_SUB, DAILY_BONUS_AMOUNT, UNSUBSCRIBE_LOCK_DAYS, UNSUB_PENALTY
+    global MIN_PRICE_PER_SUB, DAILY_BONUS_AMOUNT, UNSUBSCRIBE_LOCK_DAYS, RESUB_GRACE_HOURS
     applied = []
     for line in message.text.splitlines():
         if "=" not in line:
@@ -1480,8 +1644,8 @@ async def admin_settings_apply(message: Message, state: FSMContext):
             DAILY_BONUS_AMOUNT = value
         elif key == "UNSUBSCRIBE_LOCK_DAYS":
             UNSUBSCRIBE_LOCK_DAYS = value
-        elif key == "UNSUB_PENALTY":
-            UNSUB_PENALTY = value
+        elif key == "RESUB_GRACE_HOURS":
+            RESUB_GRACE_HOURS = value
         else:
             continue
         applied.append(f"{key}={value}")
@@ -1499,6 +1663,24 @@ async def noop(callback: CallbackQuery):
 # ============================================================================
 # ===== БЛОК: СОБЫТИЯ ГРУПП (мгновенная реакция на отписку/удаление бота) =====
 # ============================================================================
+
+@group_router.message(Command("setsupport"))
+async def set_support_chat(message: Message):
+    """Отправь эту команду прямо в группе/супергруппе, которую хочешь сделать
+    чатом поддержки — команда сработает только у админа бота (см. ADMIN_IDS)."""
+    if not is_admin(message.from_user.id):
+        return
+    if message.chat.type not in ("group", "supergroup"):
+        await message.reply("⚠️ Эту команду нужно отправить в групповом чате.")
+        return
+    async with _db_lock:
+        DB["meta"]["support_chat_id"] = message.chat.id
+        await _save_db()
+    await message.reply(
+        f"✅ Этот чат назначен чатом поддержки (ID: <code>{message.chat.id}</code>).\n"
+        f"Теперь сюда будут приходить обращения игроков — отвечай на них ответом (reply)."
+    )
+
 
 @group_router.chat_member()
 async def on_member_status_changed(event: ChatMemberUpdated, bot: Bot):
@@ -1523,7 +1705,7 @@ async def on_member_status_changed(event: ChatMemberUpdated, bot: Bot):
     async with _db_lock:
         matching_tasks = [dict(t) for t in DB["tasks"].values() if t["chat_id"] == chat_id]
     for task in matching_tasks:
-        await apply_unsubscribe_penalty(bot, task, user_id)
+        await start_unsub_grace(bot, task, user_id)
 
 
 # ============================================================================
