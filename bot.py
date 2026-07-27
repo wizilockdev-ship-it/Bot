@@ -11,10 +11,10 @@
 import os
 
 # --- Токен бота (получить у @BotFather) ---
-BOT_TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_БОТА"
+BOT_TOKEN = "8852402958:AAFkBUv9FNLI5vzznJ7RLOXKl1W_XfqRq70"
 
 # --- Telegram ID администраторов бота (можно несколько через запятую) ---
-ADMIN_IDS = [123456789]
+ADMIN_IDS = [8786951363]
 
 # --- ID закрытого чата поддержки (группа/супергруппа, куда бот пересылает
 # вопросы игроков). Бот должен быть добавлен в этот чат. Чтобы узнать ID —
@@ -24,14 +24,14 @@ ADMIN_IDS = [123456789]
 ADMIN_CHAT_ID = 0
 
 # --- Ссылка на создателя бота — показывается в статистике админ-панели ---
-CREATOR_LINK = "https://t.me/ВСТАВЬ_СВОЙ_USERNAME"
+CREATOR_LINK = "https://t.me/winikson"
 
 DB_FILE = "db.json"
 # Если DATABASE_URL не пустая строка — бот использует Postgres (Render Postgres /
 # Supabase / Neon), иначе — локальный файл db.json. На Render диск НЕ сохраняется
 # между деплоями и перезапусками — для реального проекта обязательно впиши сюда
 # connection string своей Postgres-базы!
-DATABASE_URL = ""   # например: "postgresql://user:password@host:5432/dbname"
+DATABASE_URL = "postgresql://neondb_owner:npg_nRlTm2JjM9PC@ep-wispy-grass-aw9i2moo-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"   # например: "postgresql://user:password@host:5432/dbname"
 
 # Порт для health-check веб-сервера. Render сам передаёт нужный порт через
 # переменную окружения PORT — эту строку менять не нужно.
@@ -41,8 +41,8 @@ BOT_DISPLAY_NAME = "VELRUM"
 CURRENCY_NAME = "V"
 
 # --- Обязательный канал для использования бота ---
-MANDATORY_CHANNEL_ID = 0   # например: -1001234567890 (0 = проверка отключена)
-MANDATORY_CHANNEL_LINK = "https://t.me/your_channel"
+MANDATORY_CHANNEL_ID = -1004307471533   # например: -1001234567890 (0 = проверка отключена)
+MANDATORY_CHANNEL_LINK = "https://t.me/velrum_hub"
 
 # --- Экономика ---
 MIN_PRICE_PER_SUB = 500
@@ -82,7 +82,7 @@ SUBSCRIPTION_RECHECK_INTERVAL = 900   # фоновая проверка, сек 
 # дополнительные юзернеймы на Fragment. Без этого Telegram просто покажет
 # кнопку без иконки (это ограничение Telegram, не бага бота).
 PREMIUM_EMOJI = {
-    "admin_badge": "",   # ✅ галочка, которая появится рядом с именем у админов (ADMIN_IDS)
+    "admin_badge": "5197620983254490252",   # ✅ галочка, которая появится рядом с именем у админов (ADMIN_IDS)
     "⚡": "",             # иконка раздела "Заработать"
     "🎁": "",             # иконка раздела "Бонус"
     "📯": "",             # иконка раздела "Продвигать"
