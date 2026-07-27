@@ -18,7 +18,7 @@ BOT_TOKEN = "8962930179:AAF_KwqJ9MAR-_CJTn3HsqaqmZG1ImaoEoY"
 ADMIN_ID = 8786951363  # Ваш Telegram ID (число)
 SELL_CODE = "1ptjf"  # Ваш код с сайта linkni.me
 DEV_CHANNEL_ID = "@inviteandpay"  # Канал разработчика (например: @my_channel)
-DEV_CHANNEL_LINK = "https://t.me/https://t.me/inviteandpay"  # Ссылка на канал
+DEV_CHANNEL_LINK = "https://t.me/inviteandpay"  # Ссылка на канал
 
 PORT = 10000  # Фиксированный порт для Render (без переменной окружения)
 DB_FILE = "database.db"
