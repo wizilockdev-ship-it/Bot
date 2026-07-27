@@ -11,10 +11,10 @@
 import os
 
 # --- Токен бота (получить у @BotFather) ---
-BOT_TOKEN = "8852402958:AAFoS_sWh890Bt1rVDpuLi0ko302VYHTJUw"
+BOT_TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_БОТА"
 
 # --- Telegram ID администраторов бота (можно несколько через запятую) ---
-ADMIN_IDS = [8786951363]
+ADMIN_IDS = [123456789]
 
 # --- ID закрытого чата поддержки (группа/супергруппа, куда бот пересылает
 # вопросы игроков). Бот должен быть добавлен в этот чат. Чтобы узнать ID —
@@ -24,14 +24,14 @@ ADMIN_IDS = [8786951363]
 ADMIN_CHAT_ID = 0
 
 # --- Ссылка на создателя бота — показывается в статистике админ-панели ---
-CREATOR_LINK = "https://t.me/winikson"
+CREATOR_LINK = "https://t.me/ВСТАВЬ_СВОЙ_USERNAME"
 
 DB_FILE = "db.json"
 # Если DATABASE_URL не пустая строка — бот использует Postgres (Render Postgres /
 # Supabase / Neon), иначе — локальный файл db.json. На Render диск НЕ сохраняется
 # между деплоями и перезапусками — для реального проекта обязательно впиши сюда
 # connection string своей Postgres-базы!
-DATABASE_URL = "postgresql://neondb_owner:npg_nRlTm2JjM9PC@ep-wispy-grass-aw9i2moo-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"   # например: "postgresql://user:password@host:5432/dbname"
+DATABASE_URL = ""   # например: "postgresql://user:password@host:5432/dbname"
 
 # Порт для health-check веб-сервера. Render сам передаёт нужный порт через
 # переменную окружения PORT — эту строку менять не нужно.
@@ -41,8 +41,8 @@ BOT_DISPLAY_NAME = "VELRUM"
 CURRENCY_NAME = "V"
 
 # --- Обязательный канал для использования бота ---
-MANDATORY_CHANNEL_ID = -1004307471533   # например: -1001234567890 (0 = проверка отключена)
-MANDATORY_CHANNEL_LINK = "https://t.me/velrum_hub"
+MANDATORY_CHANNEL_ID = 0   # например: -1001234567890 (0 = проверка отключена)
+MANDATORY_CHANNEL_LINK = "https://t.me/your_channel"
 
 # --- Экономика ---
 MIN_PRICE_PER_SUB = 500
@@ -62,6 +62,52 @@ FREEZE_AFTER_OFFENSES = 3        # после скольких нарушени�
 
 EARN_PAGE_SIZE = 6
 SUBSCRIPTION_RECHECK_INTERVAL = 900   # фоновая проверка, сек (15 мин)
+
+# --- Премиум-эмодзи (необязательно) -----------------------------------------
+# ВАЖНО: сюда вставляется ЧИСЛОВОЙ ID эмодзи (например "5368324170671202286"),
+# а НЕ ссылка и не сам эмодзи-символ! Ссылками премиум-эмодзи не задаются —
+# так устроен Telegram Bot API.
+#
+# Как узнать ID: перешли/пришли этот эмодзи прямо в личку боту (когда бот
+# уже запущен) и напиши команду в таком виде — /getemojiid 🔥 — бот сам
+# найдёт и пришлёт тебе числовой ID. Дальше просто вставь его сюда, в кавычки.
+#
+# Если оставить пустую строку "" — будет показан обычный эмодзи (без премиум-
+# оформления), бот от этого не сломается.
+#
+# Премиум-эмодзи работают и в тексте сообщений, и на самих кнопках (Telegram
+# Bot API 9.4+, нужен aiogram>=3.25.0 — уже прописано в requirements.txt).
+# НО: иконка на КНОПКАХ (icon_custom_emoji_id) показывается только если у
+# ВЛАДЕЛЬЦА бота (тебя) активна Telegram Premium подписка — либо у бота куплены
+# дополнительные юзернеймы на Fragment. Без этого Telegram просто покажет
+# кнопку без иконки (это ограничение Telegram, не бага бота).
+PREMIUM_EMOJI = {
+    "admin_badge": "",   # ✅ галочка, которая появится рядом с именем у админов (ADMIN_IDS)
+    "⚡": "",             # иконка раздела "Заработать"
+    "🎁": "",             # иконка раздела "Бонус"
+    "📯": "",             # иконка раздела "Продвигать"
+    "🛰": "",             # иконка раздела "Кабинет"
+    "📊": "",             # иконка раздела "Статистика"
+    "🆘": "",             # иконка раздела "Поддержка"
+    "🛠": "",             # иконка админ-панели
+    "💎": "",             # баланс в кабинете
+    "💰": "",             # суммы/деньги в текстах
+    "🤝": "",             # рефералы
+    "👑": "",             # премиум/админ-упоминания
+    "⚠️": "",             # предупреждения
+    "✅": "",             # кнопка "Проверить" / успех
+    "🔗": "",             # кнопка "Подписаться"
+    "💠": "",             # кнопка "Я подписался"
+    "🗂": "",             # кнопки со списками ("Мои задания" и т.п.)
+    "🗑": "",             # кнопка "Удалить"
+    "✖️": "",             # кнопка "Отмена"
+    "⛔": "",             # кнопка "Бан"
+    "🧊": "",             # кнопка "Разморозить баланс"
+    "📢": "",             # кнопка "Рассылка"
+    "⚙️": "",             # кнопка "Настройки"
+    "🪙": "",             # кнопка "Баланс пользователя"
+    "➕": "",             # кнопка "Докупить"
+}
 
 # ============================================================================
 
@@ -104,8 +150,45 @@ BOT_USERNAME = ""   # заполняется автоматически при �
 BAR = "━━━━━━━━━━━━━━━━━━━━"
 
 
+def pe(icon: str) -> str:
+    """Возвращает премиум-версию эмодзи (<tg-emoji>), если для него в конфиге
+    PREMIUM_EMOJI указан ID; иначе — обычный эмодзи как есть. Для ТЕКСТА сообщений."""
+    emoji_id = PREMIUM_EMOJI.get(icon)
+    if emoji_id:
+        return f'<tg-emoji emoji-id="{emoji_id}">{icon}</tg-emoji>'
+    return icon
+
+
+def pe_btn(icon: str, style: str | None = None) -> dict:
+    """Параметры для кнопок (KeyboardButton/InlineKeyboardButton) — иконка
+    премиум-эмодзи перед текстом (icon_custom_emoji_id) и/или цвет кнопки
+    (style: 'primary' синий, 'success' зелёный, 'danger' красный).
+    Требования Telegram: icon_custom_emoji_id на кнопках отображается только
+    если у владельца бота активна Telegram Premium (или куплены доп. юзернеймы
+    на Fragment) — иначе Telegram эту иконку просто проигнорирует, кнопка
+    покажет только текст. Нужен aiogram>=3.25.0 (см. requirements.txt)."""
+    kwargs = {}
+    emoji_id = PREMIUM_EMOJI.get(icon)
+    if emoji_id:
+        kwargs["icon_custom_emoji_id"] = emoji_id
+    if style:
+        kwargs["style"] = style
+    return kwargs
+
+
+def admin_badge(user_id: int) -> str:
+    """Премиум-галочка рядом с именем, если user_id есть в ADMIN_IDS.
+    Если ID для 'admin_badge' в PREMIUM_EMOJI не задан — используется ✅ как запасной вариант."""
+    if not is_admin(user_id):
+        return ""
+    emoji_id = PREMIUM_EMOJI.get("admin_badge")
+    if emoji_id:
+        return f' <tg-emoji emoji-id="{emoji_id}">✅</tg-emoji>'
+    return " ✅"
+
+
 def screen_header(icon: str, title: str) -> str:
-    return f"{icon}  <b>{title.upper()}</b>\n{BAR}\n"
+    return f"{pe(icon)}  <b>{title.upper()}</b>\n{BAR}\n"
 
 
 def card(lines: list[str]) -> str:
@@ -529,8 +612,8 @@ async def claim_daily_bonus(user_id: int):
 
 def resub_keyboard(task: dict) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔗 Подписаться", url=task["chat_link"])],
-        [InlineKeyboardButton(text="✅ Проверить", callback_data=f"resub_check:{task['id']}")],
+        [InlineKeyboardButton(text="🔗 Подписаться", url=task["chat_link"], **pe_btn("🔗"))],
+        [InlineKeyboardButton(text="✅ Проверить", callback_data=f"resub_check:{task['id']}", **pe_btn("✅", style="success"))],
     ])
 
 
@@ -712,12 +795,12 @@ async def recheck_subscriptions(bot: Bot):
 
 def main_menu(admin: bool = False) -> ReplyKeyboardMarkup:
     rows = [
-        [KeyboardButton(text="⚡ Заработать"), KeyboardButton(text="🎁 Бонус")],
-        [KeyboardButton(text="📯 Продвигать"), KeyboardButton(text="🛰 Кабинет")],
-        [KeyboardButton(text="📊 Статистика"), KeyboardButton(text="🆘 Поддержка")],
+        [KeyboardButton(text="⚡ Заработать", **pe_btn("⚡")), KeyboardButton(text="🎁 Бонус", **pe_btn("🎁"))],
+        [KeyboardButton(text="📯 Продвигать", **pe_btn("📯")), KeyboardButton(text="🛰 Кабинет", **pe_btn("🛰"))],
+        [KeyboardButton(text="📊 Статистика", **pe_btn("📊")), KeyboardButton(text="🆘 Поддержка", **pe_btn("🆘"))],
     ]
     if admin:
-        rows.append([KeyboardButton(text="🛠 Админ-панель")])
+        rows.append([KeyboardButton(text="🛠 Админ-панель", **pe_btn("🛠"))])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
 
 
@@ -732,7 +815,7 @@ def earn_list_keyboard(tasks: list[dict], page: int) -> InlineKeyboardMarkup:
     for t in page_tasks:
         rows.append([
             InlineKeyboardButton(text=f"📡 {t['chat_title'][:20]} · {fmt_v(t['price_per_sub'])}", url=t["chat_link"]),
-            InlineKeyboardButton(text="✅ Проверить", callback_data=f"check:{t['id']}"),
+            InlineKeyboardButton(text="✅ Проверить", callback_data=f"check:{t['id']}", **pe_btn("✅", style="success")),
         ])
     nav = []
     if page > 0:
@@ -748,8 +831,8 @@ def earn_list_keyboard(tasks: list[dict], page: int) -> InlineKeyboardMarkup:
 
 def cabinet_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🗂 Мои задания", callback_data="cabinet:my_tasks")],
-        [InlineKeyboardButton(text="🤝 Реферальная система", callback_data="cabinet:referral")],
+        [InlineKeyboardButton(text="🗂 Мои задания", callback_data="cabinet:my_tasks", **pe_btn("🗂"))],
+        [InlineKeyboardButton(text="🤝 Реферальная система", callback_data="cabinet:referral", **pe_btn("🤝"))],
     ])
 
 
@@ -767,11 +850,11 @@ def my_tasks_keyboard(tasks: list[dict]) -> InlineKeyboardMarkup:
             callback_data="noop",
         )])
         rows.append([
-            InlineKeyboardButton(text="➕ Докупить", callback_data=f"task_buy:{t['id']}"),
+            InlineKeyboardButton(text="➕ Докупить", callback_data=f"task_buy:{t['id']}", **pe_btn("➕", style="success")),
             InlineKeyboardButton(text=toggle_label, callback_data=f"task_toggle:{t['id']}"),
         ])
         rows.append([
-            InlineKeyboardButton(text="🗑 Удалить задание", callback_data=f"task_delete:{t['id']}"),
+            InlineKeyboardButton(text="🗑 Удалить задание", callback_data=f"task_delete:{t['id']}", **pe_btn("🗑", style="danger")),
         ])
     if not rows:
         rows = [[InlineKeyboardButton(text="Заданий пока нет", callback_data="noop")]]
@@ -781,29 +864,29 @@ def my_tasks_keyboard(tasks: list[dict]) -> InlineKeyboardMarkup:
 def task_delete_confirm_keyboard(task_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"task_delete_confirm:{task_id}"),
-            InlineKeyboardButton(text="✖️ Отмена", callback_data="cabinet:my_tasks"),
+            InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"task_delete_confirm:{task_id}", **pe_btn("✅", style="danger")),
+            InlineKeyboardButton(text="✖️ Отмена", callback_data="cabinet:my_tasks", **pe_btn("✖️")),
         ]
     ])
 
 
 def mandatory_sub_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔗 Подписаться", url=MANDATORY_CHANNEL_LINK)],
-        [InlineKeyboardButton(text="💠 Я подписался", callback_data="mandatory_check")],
+        [InlineKeyboardButton(text="🔗 Подписаться", url=MANDATORY_CHANNEL_LINK, **pe_btn("🔗"))],
+        [InlineKeyboardButton(text="💠 Я подписался", callback_data="mandatory_check", **pe_btn("💠", style="success"))],
     ])
 
 
 def admin_panel_keyboard() -> InlineKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin:stats")],
-        [InlineKeyboardButton(text="🪙 Баланс пользователя", callback_data="admin:balance")],
-        [InlineKeyboardButton(text="⛔ Бан / 💠 Разбан", callback_data="admin:ban")],
-        [InlineKeyboardButton(text="🧊 Разморозить баланс", callback_data="admin:unfreeze")],
-        [InlineKeyboardButton(text="📯 Управление заданиями", callback_data="admin:tasks")],
-        [InlineKeyboardButton(text="🗂 Последние пользователи", callback_data="admin:users")],
-        [InlineKeyboardButton(text="📢 Рассылка всем", callback_data="admin:broadcast")],
-        [InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin:settings")],
+        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin:stats", **pe_btn("📊"))],
+        [InlineKeyboardButton(text="🪙 Баланс пользователя", callback_data="admin:balance", **pe_btn("🪙"))],
+        [InlineKeyboardButton(text="⛔ Бан / 💠 Разбан", callback_data="admin:ban", **pe_btn("⛔", style="danger"))],
+        [InlineKeyboardButton(text="🧊 Разморозить баланс", callback_data="admin:unfreeze", **pe_btn("🧊"))],
+        [InlineKeyboardButton(text="📯 Управление заданиями", callback_data="admin:tasks", **pe_btn("📯"))],
+        [InlineKeyboardButton(text="🗂 Последние пользователи", callback_data="admin:users", **pe_btn("🗂"))],
+        [InlineKeyboardButton(text="📢 Рассылка всем", callback_data="admin:broadcast", **pe_btn("📢"))],
+        [InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin:settings", **pe_btn("⚙️"))],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -955,13 +1038,14 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     await try_reward_referral(bot, message.from_user.id, bool(message.from_user.is_premium))
 
     name = message.from_user.full_name or "друг"
+    badge = admin_badge(message.from_user.id)
     text = (
-        f"🛰 <b>{BOT_DISPLAY_NAME}</b>\n{BAR}\n"
-        f"Привет, {name} 👋\n\n"
-        f"⚡ <b>Заработать</b> — подписывайся на каналы, получай {CURRENCY_NAME}\n"
-        f"📯 <b>Продвигать</b> — трать {CURRENCY_NAME} на подписчиков для своего канала\n"
-        f"🎁 <b>Бонус</b> — забирай награду каждые 24 часа\n"
-        f"🛰 <b>Кабинет</b> — баланс и твои задания\n{BAR}\n"
+        f"{pe('🛰')} <b>{BOT_DISPLAY_NAME}</b>\n{BAR}\n"
+        f"Привет, {name}{badge} 👋\n\n"
+        f"{pe('⚡')} <b>Заработать</b> — подписывайся на каналы, получай {CURRENCY_NAME}\n"
+        f"{pe('📯')} <b>Продвигать</b> — трать {CURRENCY_NAME} на подписчиков для своего канала\n"
+        f"{pe('🎁')} <b>Бонус</b> — забирай награду каждые 24 часа\n"
+        f"{pe('🛰')} <b>Кабинет</b> — баланс и твои задания\n{BAR}\n"
         f"Выбери пункт меню ниже 👇"
     )
     await send_screen(message, text, main_menu(admin=is_admin(message.from_user.id)))
@@ -1163,9 +1247,10 @@ async def cabinet(message: Message, bot: Bot):
     async with _db_lock:
         user = DB["users"].get(str(message.from_user.id))
     balance = user["balance"] if user else 0
+    badge = admin_badge(message.from_user.id)
     await send_screen(
         message,
-        screen_header("🛰", "Кабинет") + f"💎 Баланс: <b>{fmt_v(balance)}</b>",
+        screen_header("🛰", "Кабинет") + f"{message.from_user.full_name or 'Игрок'}{badge}\n\n{pe('💎')} Баланс: <b>{fmt_v(balance)}</b>",
         cabinet_menu(),
     )
 
@@ -1298,9 +1383,9 @@ async def personal_stats(message: Message, bot: Bot):
     text = (
         screen_header("📊", "Статистика") +
         f"👤 Игроков в боте: <b>{active_users}</b>\n"
-        f"💱 Валюты в обороте: <b>{fmt_v(turnover)}</b>\n"
+        f"{pe('💰')} Валюты в обороте: <b>{fmt_v(turnover)}</b>\n"
         f"📅 Дата старта: {start_date}\n"
-        f"👑 Админ: {CREATOR_LINK}"
+        f"{pe('👑')} Админ: {CREATOR_LINK}"
     )
     await send_screen(message, text)
 
@@ -1353,8 +1438,8 @@ async def support_receive(message: Message, state: FSMContext, bot: Bot):
 
     uname = f"@{user.username}" if user.username else (user.full_name or f"ID {user.id}")
     admin_text = (
-        f"🆘 <b>Новое обращение</b>\n{BAR}\n"
-        f"От: {html.escape(uname)} (ID: <code>{user.id}</code>)\n\n"
+        f"{pe('🆘')} <b>Новое обращение</b>\n{BAR}\n"
+        f"От: {html.escape(uname)}{admin_badge(user.id)} (ID: <code>{user.id}</code>)\n\n"
         f"{html.escape(text)}\n\n"
         f"↩️ Ответь на ЭТО сообщение (reply), чтобы отправить ответ игроку."
     )
@@ -1406,6 +1491,32 @@ async def support_answer(message: Message, bot: Bot):
 # ============================================================================
 # ===== БЛОК: АДМИН-ПАНЕЛЬ =====================================================
 # ============================================================================
+
+@router.message(Command("getemojiid"))
+async def get_emoji_id(message: Message):
+    """Только для админов (ADMIN_IDS). Пришли команду вместе с премиум-эмодзи,
+    например: /getemojiid 🔥 — бот найдёт его в сообщении и пришлёт числовой
+    ID, который нужно вставить в PREMIUM_EMOJI в конфиге вверху файла."""
+    if not is_admin(message.from_user.id):
+        return
+    custom_ids = [
+        e.custom_emoji_id for e in (message.entities or [])
+        if e.type == "custom_emoji"
+    ]
+    if not custom_ids:
+        await message.reply(
+            "⚠️ Не нашёл премиум-эмодзи в сообщении.\n\n"
+            "Отправь команду ВМЕСТЕ с самим эмодзи в одном сообщении, например:\n"
+            "<code>/getemojiid 🔥</code> (где 🔥 — твой премиум-эмодзи, вставленный из своей коллекции)."
+        )
+        return
+    lines = "\n".join(f"<code>{cid}</code>" for cid in custom_ids)
+    await message.reply(
+        f"✅ Найден ID эмодзи:\n{lines}\n\n"
+        f"Скопируй его и вставь в PREMIUM_EMOJI в конфиге, например:\n"
+        f'<code>"⚡": "{custom_ids[0]}",</code>'
+    )
+
 
 @router.message(F.text == "🛠 Админ-панель")
 async def admin_panel(message: Message):
